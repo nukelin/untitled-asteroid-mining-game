@@ -1,5 +1,5 @@
 import Panel from './Panel'
-import { TRAVEL_DESTINATIONS, getActionItems } from '../constants/gameConstants'
+import { TRAVEL_DESTINATIONS, ORE_TYPES, ORE_WEIGHTS, getActionItems } from '../constants/gameConstants'
 import { MARKET_PRICES } from '../constants/marketPrices'
 
 function TravelView({ travelIndex, location }) {
@@ -46,7 +46,26 @@ function MarketView({ inventory, marketIndex }) {
   )
 }
 
-export default function ActionBox({ location, mining, actionIndex, actionSubView, travelIndex, marketIndex, inventory }) {
+function OreSelectView({ mineOreIndex }) {
+  const totalWeight = Object.values(ORE_WEIGHTS).reduce((a, b) => a + b, 0)
+  return (
+    <div>
+      <div className="action-subheader">-- Select Ore --</div>
+      {ORE_TYPES.map((ore, i) => {
+        const isSelected = i === mineOreIndex
+        const chance = Math.round((ORE_WEIGHTS[ore] / totalWeight) * 100)
+        return (
+          <div key={ore} className={`list-row${isSelected ? ' selected' : ''}`}>
+            {isSelected ? '> ' : '  '}{ore.toUpperCase().padEnd(8)} {chance}% abundance
+          </div>
+        )
+      })}
+      <div className="action-hint">[ESC] Back</div>
+    </div>
+  )
+}
+
+export default function ActionBox({ location, mining, actionIndex, actionSubView, travelIndex, marketIndex, mineOreIndex, inventory }) {
   if (actionSubView === 'travel') {
     return (
       <Panel title="ACTIONS">
@@ -59,6 +78,14 @@ export default function ActionBox({ location, mining, actionIndex, actionSubView
     return (
       <Panel title="ACTIONS">
         <MarketView inventory={inventory} marketIndex={marketIndex} />
+      </Panel>
+    )
+  }
+
+  if (actionSubView === 'mineOre') {
+    return (
+      <Panel title="ACTIONS">
+        <OreSelectView mineOreIndex={mineOreIndex} />
       </Panel>
     )
   }

@@ -1,6 +1,8 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react'
 import {
   TRAVEL_COST,
+  TRAVEL_DURATION_MS,
+  TRAVEL_TICK_MS,
   REPAIR_COST_PER_HP,
   REFUEL_COST_PER_UNIT,
   MINING_TICK_MS,
@@ -10,8 +12,9 @@ import {
   MINING_YIELD_MAX,
   MINING_FUEL_DRAIN_PER_SECOND,
   TRAVEL_DESTINATIONS,
+  ORE_TYPES,
+  ORE_MODIFIERS,
   getActionItems,
-  pickWeightedOre,
 } from '../constants/gameConstants'
 import { MARKET_PRICES } from '../constants/marketPrices'
 
@@ -35,11 +38,18 @@ const initialState = {
     startedAt: null,
     fuelAtStart: 100,
   },
+  travel: {
+    active: false,
+    destination: null,
+    progress: 0,
+    startedAt: null,
+  },
   ui: {
     actionIndex: 0,
-    actionSubView: null,  // null | 'travel' | 'market'
+    actionSubView: null,  // null | 'travel' | 'market' | 'mineOre'
     travelIndex: 0,
     marketIndex: 0,
+    mineOreIndex: 0,
     message: null,
   },
 }
@@ -62,6 +72,12 @@ function reducer(state, action) {
         return { ...state, ui: { ...state.ui, marketIndex: next } }
       }
 
+      if (state.ui.actionSubView === 'mineOre') {
+        const max = ORE_TYPES.length - 1
+        const next = Math.max(0, Math.min(max, state.ui.mineOreIndex + delta))
+        return { ...state, ui: { ...state.ui, mineOreIndex: next } }
+      }
+
       const items = getActionItems(state.location, state.mining.active)
       const next = Math.max(0, Math.min(items.length - 1, state.ui.actionIndex + delta))
       return { ...state, ui: { ...state.ui, actionIndex: next } }
@@ -82,6 +98,14 @@ function reducer(state, action) {
         return reducer(state, { type: 'SELL_ORE', payload: { oreType } })
       }
 
+      if (actionSubView === 'mineOre') {
+        const oreType = ORE_TYPES[state.ui.mineOreIndex]
+        return reducer(
+          { ...state, ui: { ...state.ui, actionSubView: null } },
+          { type: 'START_MINING', payload: { oreType } }
+        )
+      }
+
       const items = getActionItems(state.location, state.mining.active)
       const selected = items[actionIndex]
       if (!selected) return state
@@ -92,7 +116,7 @@ function reducer(state, action) {
             return reducer(state, { type: 'SET_MESSAGE', payload: 'Travel to the asteroid belt to mine.' })
           }
           if (state.mining.active) return reducer(state, { type: 'CANCEL_MINING' })
-          return reducer(state, { type: 'START_MINING' })
+          return { ...state, ui: { ...state.ui, actionSubView: 'mineOre', mineOreIndex: 0 } }
         case 'travel':
           return { ...state, ui: { ...state.ui, actionSubView: 'travel', travelIndex: 0 } }
         case 'market':
@@ -115,6 +139,9 @@ function reducer(state, action) {
       if (destination === state.location) {
         return reducer(state, { type: 'SET_MESSAGE', payload: 'Already here.' })
       }
+      if (state.travel.active) {
+        return reducer(state, { type: 'SET_MESSAGE', payload: 'Already traveling!' })
+      }
       if (state.ship.fuel < TRAVEL_COST) {
         return reducer(state, { type: 'SET_MESSAGE', payload: 'Not enough fuel!' })
       }
@@ -125,9 +152,29 @@ function reducer(state, action) {
       return {
         ...state,
         ship: { ...state.ship, fuel: newFuel },
-        location: destination,
         mining: cancelMining,
+        travel: { active: true, destination, progress: 0, startedAt: Date.now() },
         ui: { ...state.ui, actionSubView: null, actionIndex: 0 },
+      }
+    }
+
+    case 'TICK_TRAVEL': {
+      if (!state.travel.active) return state
+      const { now } = action.payload
+      const elapsed = now - state.travel.startedAt
+      const progress = Math.min(1, elapsed / TRAVEL_DURATION_MS)
+      if (progress >= 1) {
+        return reducer(state, { type: 'COMPLETE_TRAVEL' })
+      }
+      return { ...state, travel: { ...state.travel, progress } }
+    }
+
+    case 'COMPLETE_TRAVEL': {
+      const { destination } = state.travel
+      return {
+        ...state,
+        location: destination,
+        travel: { active: false, destination: null, progress: 0, startedAt: null },
       }
     }
 
@@ -136,9 +183,10 @@ function reducer(state, action) {
         return reducer(state, { type: 'SET_MESSAGE', payload: 'Cargo hold full!' })
       }
       if (state.mining.active) return state
-      const oreType = pickWeightedOre()
+      const oreType = action.payload?.oreType
+      const { durationMult } = ORE_MODIFIERS[oreType] ?? ORE_MODIFIERS.iron
       const durationMs =
-        MINING_DURATION_MIN + Math.random() * (MINING_DURATION_MAX - MINING_DURATION_MIN)
+        (MINING_DURATION_MIN + Math.random() * (MINING_DURATION_MAX - MINING_DURATION_MIN)) * durationMult
       return {
         ...state,
         mining: {
@@ -176,9 +224,10 @@ function reducer(state, action) {
     case 'COMPLETE_MINING': {
       const freeSpace = state.ship.cargoMax - state.ship.cargoUsed
       if (freeSpace <= 0) return reducer(state, { type: 'CANCEL_MINING' })
-      const rawYield = MINING_YIELD_MIN + Math.random() * (MINING_YIELD_MAX - MINING_YIELD_MIN)
-      const yieldKg = Math.round(Math.min(rawYield, freeSpace))
       const oreType = state.mining.oreType
+      const { yieldMult } = ORE_MODIFIERS[oreType] ?? ORE_MODIFIERS.iron
+      const rawYield = (MINING_YIELD_MIN + Math.random() * (MINING_YIELD_MAX - MINING_YIELD_MIN)) * yieldMult
+      const yieldKg = Math.round(Math.min(rawYield, freeSpace))
       return {
         ...state,
         inventory: { ...state.inventory, [oreType]: state.inventory[oreType] + yieldKg },
@@ -274,6 +323,14 @@ export function useGameState() {
     }, MINING_TICK_MS)
     return () => clearInterval(interval)
   }, [state.mining.active, state.mining.startedAt])
+
+  useEffect(() => {
+    if (!state.travel.active) return
+    const interval = setInterval(() => {
+      dispatch({ type: 'TICK_TRAVEL', payload: { now: Date.now() } })
+    }, TRAVEL_TICK_MS)
+    return () => clearInterval(interval)
+  }, [state.travel.active, state.travel.startedAt])
 
   return { state, dispatch: dispatchWrapped }
 }
