@@ -8,24 +8,16 @@ This is just some vibecoded crap I have concocted with Claude Code.
 
 ## How to play
 
-Sample text that i can edit later Sample text that i can edit later Sample text that i can edit later
-Sample text that i can edit later Sample text that i can edit later Sample text that i can edit later
-Sample text that i can edit later Sample text that i can edit later Sample text that i can edit later
-Sample text that i can edit later Sample text that i can edit later Sample text that i can edit later
-Sample text that i can edit later Sample text that i can edit later Sample text that i can edit later
-Sample text that i can edit later Sample text that i can edit later Sample text that i can edit later
-Sample text that i can edit later Sample text that i can edit later Sample text that i can edit later
-Sample text that i can edit later Sample text that i can edit later Sample text that i can edit later
-Sample text that i can edit later Sample text that i can edit later Sample text that i can edit later
+Mine ships or asteroids or ts
+
 
 ## FAQ
 
-**Question:** Why is this a thing
+**Question:** Who made this?
 
-**Answer:** Cause why not
+**Answer:** Claude Code. I have very little programming knowledge.
 
----
 
-**Question:** how are you
+**Question:** This is the worst thing I have ever seen.
 
-**Answer:** good
+**Answer:** As an AI language model, I cannot process that request. That goes against the guidelines of my ethics model.
