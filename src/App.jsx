@@ -8,9 +8,6 @@
 
 import { useEffect } from 'react'
 import { useGameState } from './hooks/useGameState'
-import ShipStatus from './components/ShipStatus'
-import Inventory from './components/Inventory'
-import Money from './components/Money'
 import StatusBar from './components/StatusBar'
 import ActionBox from './components/ActionBox'
 
@@ -19,9 +16,10 @@ export default function App() {
   const { state, dispatch } = useGameState()
 
   // Destructure the top-level slices of state for easy passing to child components.
-  const { ship, money, inventory, location, mining, travel, ui } = state
+  const { ship, money, inventory, location, mining, travel, ui, upgrades, equipped } = state
 
-  // actionSubView tracks whether the player has opened a sub-menu (e.g. 'travel' or 'market').
+  // actionSubView tracks which sub-menu is open:
+  //   null | 'travel' | 'sell' | 'sellOre' | 'mineOre'
   // message is an optional transient status string shown in the status bar.
   const { actionSubView, message } = ui
 
@@ -74,35 +72,36 @@ export default function App() {
       {/* Game title displayed at the very top */}
       <div className="game-title">untitled asteroid mining game</div>
 
-      {/* Top row: three side-by-side stat panels */}
-      <div className="top-row">
-        {/* Armor, fuel, and cargo bars */}
-        <ShipStatus ship={ship} />
-        {/* Ore inventory (kg per type) */}
-        <Inventory inventory={inventory} />
-        {/* Current credit balance */}
-        <Money money={money} />
-      </div>
+      {/* Status panel: ship stats, money, location, activity, and inventory */}
+      <StatusBar location={location} mining={mining} travel={travel} ship={ship} money={money} inventory={inventory} message={message} />
 
-      {/* Single-line status bar: current location, mining progress, and flash messages */}
-      <StatusBar location={location} mining={mining} travel={travel} message={message} />
-
-      {/* Action panel: main menu, travel sub-menu, or market sub-menu */}
+      {/* Action panel: pinned to the bottom of the screen */}
+      <div className="action-box-bottom">
       <ActionBox
         location={location}
         mining={mining}
         travel={travel}
         actionIndex={ui.actionIndex}       // which main-menu item is highlighted
-        actionSubView={actionSubView}       // which sub-menu is open (null | 'travel' | 'market' | 'mineOre')
+        actionSubView={actionSubView}       // null | 'travel' | 'sell' | 'sellOre' | 'mineOre'
         travelIndex={ui.travelIndex}        // highlighted row in the travel list
-        marketIndex={ui.marketIndex}        // highlighted row in the market list
+        marketIndex={ui.marketIndex}        // highlighted row in the ore list inside sellOre
         mineOreIndex={ui.mineOreIndex}      // highlighted row in the ore picker
+        buyerIndex={ui.buyerIndex}          // highlighted row in the buyer country list
+        buyerPrices={ui.buyerPrices}        // price table generated when Sell is opened
+        selectedBuyer={ui.selectedBuyer}    // id of the buyer country the player chose
+        shopIndex={ui.shopIndex}                    // highlighted row in the upgrade shop
+        upgrades={upgrades}                         // array of purchased upgrade IDs
+        money={money}                               // used to dim unaffordable upgrades
+        equipSlotIndex={ui.equipSlotIndex}          // highlighted slot in the equip view
+        equipUpgradeIndex={ui.equipUpgradeIndex}    // highlighted upgrade in the slot view
+        selectedEquipSlot={ui.selectedEquipSlot}    // slot id the player chose to modify
+        equipped={equipped}                         // { armor: id|null, engine: id|null, ... }
         inventory={inventory}
       />
-
       {/* Persistent hint reminding the player of the keyboard controls */}
       <div className="controls-hint">
         ↑↓ navigate &nbsp;|&nbsp; ENTER confirm &nbsp;|&nbsp; ESC back
+      </div>
       </div>
     </>
   )

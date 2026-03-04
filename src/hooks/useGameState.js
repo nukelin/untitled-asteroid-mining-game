@@ -3,6 +3,8 @@ import { TRAVEL_COST, TRAVEL_DURATION_MS, TRAVEL_TICK_MS } from '../constants/tr
 import { MINING_TICK_MS } from '../constants/mining'
 import { TRAVEL_DESTINATIONS, LOCATIONS_BY_ID } from '../constants/locations'
 import { ORE_TYPES } from '../constants/ores'
+import { BUYER_COUNTRIES, generateBuyerPrices } from '../constants/buyers'
+import ALL_UPGRADES, { UPGRADES_BY_ID, UPGRADE_SLOTS } from '../constants/shipUpgrades'
 import { getActionItems } from '../constants/utils'
 
 const initialState = {
@@ -12,10 +14,13 @@ const initialState = {
     fuel: 100,
     fuelMax: 100,
     cargoUsed: 0,
-    cargoMax: 500,
+    cargoMax: 200000,  // 200,000 kg starting hold — fits ~10-20 mining passes
   },
-  money: 1000,
+  money: 10000000,     // $10,000,000 starting credits
   inventory: { iron: 0, nickel: 0, cobalt: 0, gold: 0 },
+  upgrades: [],   // array of upgrade IDs the player has purchased (owned but not necessarily equipped)
+  // One equipped upgrade ID per slot, or null if the slot is empty
+  equipped: { armor: null, engine: null, cargo: null, mining: null },
   location: 'earth',
   mining: {
     active: false,
@@ -33,10 +38,17 @@ const initialState = {
   },
   ui: {
     actionIndex: 0,
-    actionSubView: null,  // null | 'travel' | 'market' | 'mineOre'
+    actionSubView: null,  // null | 'travel' | 'sell' | 'sellOre' | 'mineOre' | 'shop' | 'equip' | 'equipSlot'
     travelIndex: 0,
-    marketIndex: 0,
+    marketIndex: 0,       // cursor position in the ore list inside sellOre view
     mineOreIndex: 0,
+    buyerIndex: 0,        // cursor position in the buyer country list
+    buyerPrices: null,    // generated price table: { america: { iron: N, ... }, ... }
+    selectedBuyer: null,  // id of the buyer country the player chose
+    shopIndex: 0,          // cursor position in the upgrade shop list
+    equipSlotIndex: 0,     // cursor position in the slot list (equip view)
+    equipUpgradeIndex: 0,  // cursor position in the upgrade list (equipSlot view)
+    selectedEquipSlot: null, // slot id the player chose to modify
     message: null,
   },
 }
@@ -54,7 +66,40 @@ function reducer(state, action) {
         return { ...state, ui: { ...state.ui, travelIndex: next } }
       }
 
-      if (state.ui.actionSubView === 'market') {
+      // 'equip' view: player picks a slot to modify
+      if (state.ui.actionSubView === 'equip') {
+        const max = UPGRADE_SLOTS.length - 1
+        const next = Math.max(0, Math.min(max, state.ui.equipSlotIndex + delta))
+        return { ...state, ui: { ...state.ui, equipSlotIndex: next } }
+      }
+
+      // 'equipSlot' view: player picks which upgrade to put in the chosen slot
+      // Options are: [None, ...owned upgrades for that slot]
+      if (state.ui.actionSubView === 'equipSlot') {
+        const slotUpgrades = ALL_UPGRADES.filter(
+          u => u.slot === state.ui.selectedEquipSlot && state.upgrades.includes(u.id)
+        )
+        const max = slotUpgrades.length  // +1 for "None" option, then -1 = length
+        const next = Math.max(0, Math.min(max, state.ui.equipUpgradeIndex + delta))
+        return { ...state, ui: { ...state.ui, equipUpgradeIndex: next } }
+      }
+
+      // 'shop' view: player picks an upgrade to buy
+      if (state.ui.actionSubView === 'shop') {
+        const max = ALL_UPGRADES.length - 1
+        const next = Math.max(0, Math.min(max, state.ui.shopIndex + delta))
+        return { ...state, ui: { ...state.ui, shopIndex: next } }
+      }
+
+      // 'sell' view: player picks a buyer country
+      if (state.ui.actionSubView === 'sell') {
+        const max = BUYER_COUNTRIES.length - 1
+        const next = Math.max(0, Math.min(max, state.ui.buyerIndex + delta))
+        return { ...state, ui: { ...state.ui, buyerIndex: next } }
+      }
+
+      // 'sellOre' view: player picks which ore to sell to the chosen buyer
+      if (state.ui.actionSubView === 'sellOre') {
         const max = Object.keys(state.inventory).length - 1
         const next = Math.max(0, Math.min(max, state.ui.marketIndex + delta))
         return { ...state, ui: { ...state.ui, marketIndex: next } }
@@ -81,10 +126,62 @@ function reducer(state, action) {
         return reducer(state, { type: 'TRAVEL', payload: { destination: dest.id } })
       }
 
-      if (actionSubView === 'market') {
+      // Player confirmed a slot — step into the upgrade picker for that slot
+      if (actionSubView === 'equip') {
+        const slot = UPGRADE_SLOTS[state.ui.equipSlotIndex]
+        if (!slot) return state
+        return {
+          ...state,
+          ui: {
+            ...state.ui,
+            actionSubView: 'equipSlot',
+            selectedEquipSlot: slot.id,
+            equipUpgradeIndex: 0,
+          },
+        }
+      }
+
+      // Player confirmed an upgrade (or None) to equip in the selected slot
+      if (actionSubView === 'equipSlot') {
+        const slot = state.ui.selectedEquipSlot
+        const slotUpgrades = ALL_UPGRADES.filter(
+          u => u.slot === slot && state.upgrades.includes(u.id)
+        )
+        // Index 0 = "None", indices 1+ = upgrades
+        const upgradeId = state.ui.equipUpgradeIndex === 0
+          ? null
+          : slotUpgrades[state.ui.equipUpgradeIndex - 1]?.id ?? null
+        return reducer(state, { type: 'EQUIP_UPGRADE', payload: { slot, upgradeId } })
+      }
+
+      // Player confirmed an upgrade in the shop — attempt to buy it
+      if (actionSubView === 'shop') {
+        const upgrade = ALL_UPGRADES[state.ui.shopIndex]
+        if (!upgrade) return state
+        return reducer(state, { type: 'BUY_UPGRADE', payload: { upgradeId: upgrade.id } })
+      }
+
+      // Player confirmed a buyer country — step into the ore-picker for that buyer
+      if (actionSubView === 'sell') {
+        const buyer = BUYER_COUNTRIES[state.ui.buyerIndex]
+        if (!buyer) return state
+        return {
+          ...state,
+          ui: {
+            ...state.ui,
+            actionSubView: 'sellOre',
+            selectedBuyer: buyer.id,
+            marketIndex: 0,  // reset ore cursor whenever entering ore list
+          },
+        }
+      }
+
+      // Player confirmed an ore — sell it at the chosen buyer's price
+      if (actionSubView === 'sellOre') {
         const oreTypes = Object.keys(state.inventory)
         const oreType = oreTypes[marketIndex]
-        return reducer(state, { type: 'SELL_ORE', payload: { oreType } })
+        const price = state.ui.buyerPrices?.[state.ui.selectedBuyer]?.[oreType]
+        return reducer(state, { type: 'SELL_ORE', payload: { oreType, price } })
       }
 
       if (actionSubView === 'mineOre') {
@@ -105,8 +202,21 @@ function reducer(state, action) {
         }
         case 'travel':
           return { ...state, ui: { ...state.ui, actionSubView: 'travel', travelIndex: 0 } }
-        case 'market':
-          return { ...state, ui: { ...state.ui, actionSubView: 'market', marketIndex: 0 } }
+        case 'sell':
+          // Generate fresh buyer prices every time the player opens Sell
+          return {
+            ...state,
+            ui: {
+              ...state.ui,
+              actionSubView: 'sell',
+              buyerIndex: 0,
+              buyerPrices: generateBuyerPrices(),
+            },
+          }
+        case 'shop':
+          return { ...state, ui: { ...state.ui, actionSubView: 'shop', shopIndex: 0 } }
+        case 'equip':
+          return { ...state, ui: { ...state.ui, actionSubView: 'equip', equipSlotIndex: 0 } }
         case 'repair':
           return reducer(state, { type: 'REPAIR_SHIP' })
         case 'refuel':
@@ -117,7 +227,12 @@ function reducer(state, action) {
     }
 
     case 'EXIT_SUBVIEW': {
-      return { ...state, ui: { ...state.ui, actionSubView: null } }
+      // Step back one level rather than always jumping to the main menu
+      const subView = state.ui.actionSubView
+      const prev = subView === 'sellOre'   ? 'sell'
+                 : subView === 'equipSlot' ? 'equip'
+                 : null
+      return { ...state, ui: { ...state.ui, actionSubView: prev } }
     }
 
     case 'TRAVEL': {
@@ -187,6 +302,67 @@ function reducer(state, action) {
     case 'REFUEL_SHIP': {
       const handler = LOCATIONS_BY_ID[state.location]?.handlers?.refuel
       return handler ? handler(state) : state
+    }
+
+    case 'BUY_UPGRADE': {
+      const { upgradeId } = action.payload
+      const upgrade = UPGRADES_BY_ID[upgradeId]
+      if (!upgrade) return state
+
+      // Can't buy the same upgrade twice
+      if (state.upgrades.includes(upgradeId)) {
+        return reducer(state, { type: 'SET_MESSAGE', payload: 'Already owned!' })
+      }
+
+      // Check if the player has enough money
+      if (state.money < upgrade.price) {
+        return reducer(state, { type: 'SET_MESSAGE', payload: 'Insufficient credits!' })
+      }
+
+      // Just add to owned inventory — the player equips it manually via the Equip menu
+      return {
+        ...state,
+        money:    state.money - upgrade.price,
+        upgrades: [...state.upgrades, upgradeId],
+        ui:       { ...state.ui, message: `${upgrade.name} purchased! Equip it from the Equip menu.` },
+      }
+    }
+
+    case 'EQUIP_UPGRADE': {
+      const { slot, upgradeId } = action.payload
+      // upgradeId is null when the player selects "None" (unequip)
+
+      const currentId = state.equipped[slot]
+      const currentUpgrade = currentId ? UPGRADES_BY_ID[currentId] : null
+      const newUpgrade = upgradeId ? UPGRADES_BY_ID[upgradeId] : null
+
+      // Guard: make sure the player actually owns the upgrade they're trying to equip
+      if (newUpgrade && !state.upgrades.includes(upgradeId)) {
+        return reducer(state, { type: 'SET_MESSAGE', payload: 'You do not own that upgrade.' })
+      }
+
+      // Build updated ship stats by unapplying the old upgrade and applying the new one
+      const s = currentUpgrade?.stats ?? {}
+      const n = newUpgrade?.stats   ?? {}
+      const newShip = {
+        ...state.ship,
+        armorMax: state.ship.armorMax - (s.armorBonus ?? 0) + (n.armorBonus ?? 0),
+        // Keep current armor clamped to the new max
+        armor:    Math.min(state.ship.armor - (s.armorBonus ?? 0) + (n.armorBonus ?? 0),
+                           state.ship.armorMax - (s.armorBonus ?? 0) + (n.armorBonus ?? 0)),
+        fuelMax:  state.ship.fuelMax  - (s.fuelBonus  ?? 0) + (n.fuelBonus  ?? 0),
+        fuel:     Math.min(state.ship.fuel - (s.fuelBonus ?? 0) + (n.fuelBonus ?? 0),
+                           state.ship.fuelMax - (s.fuelBonus ?? 0) + (n.fuelBonus ?? 0)),
+        cargoMax: state.ship.cargoMax - (s.cargoBonus ?? 0) + (n.cargoBonus ?? 0),
+      }
+
+      const msg = newUpgrade ? `${newUpgrade.name} equipped!` : `${slot} slot cleared.`
+      return {
+        ...state,
+        ship:     newShip,
+        equipped: { ...state.equipped, [slot]: upgradeId ?? null },
+        ui:       { ...state.ui, message: msg },
+      }
     }
 
     case 'SET_MESSAGE': {

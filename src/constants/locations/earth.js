@@ -7,7 +7,9 @@ export default {
   id: 'earth',
   label: 'Earth',
   actions: [
-    { id: 'market', label: 'Market' },
+    { id: 'sell',  label: 'Sell'  },        // opens the buyer country picker
+    { id: 'shop',  label: 'Shop'  },        // opens the upgrade shop
+    { id: 'equip', label: 'Equip' },        // opens the equip screen
     { id: 'repair', label: 'Repair Ship' },
     { id: 'refuel', label: 'Refuel Ship' },
   ],
@@ -29,10 +31,11 @@ export default {
       return { ...state, money: state.money - cost, ship: { ...state.ship, fuel: state.ship.fuelMax } }
     },
 
-    sell_ore(state, { oreType }) {
+    sell_ore(state, { oreType, price }) {
       const qty = state.inventory[oreType]
       if (!qty || qty <= 0) return msg(state, 'Nothing to sell!')
-      const earnings = qty * (MARKET_PRICES[oreType] || 0)
+      // Use the buyer's negotiated price if provided, fall back to base market price for safety
+      const earnings = qty * (price ?? MARKET_PRICES[oreType] ?? 0)
       return {
         ...state,
         money: state.money + earnings,

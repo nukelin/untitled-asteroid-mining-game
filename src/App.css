@@ -190,6 +190,110 @@ body {
   color: #888;
 }
 
+/* ── Buyer Select (country picker inside Sell) ─────────── */
+/* Small prompt line above the buyer table */
+.market-hint {
+  color: #888;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+/* Header row showing ore-type column labels */
+.buyer-header-row {
+  display: flex;
+  gap: 0;
+  color: #555;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 2px;
+  margin-bottom: 2px;
+}
+
+/* One row per buyer country */
+.buyer-row {
+  display: flex;
+  gap: 0;
+  padding: 1px 0;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.buyer-row.selected {
+  background: #2a2a2a;
+  color: #c0c0c0;
+}
+
+/* ── Upgrade Shop ──────────────────────────────────────── */
+.shop-header-row {
+  display: grid;
+  grid-template-columns: 20ch 18ch 10ch;
+  gap: 4px;
+  color: #555;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 2px;
+  margin-bottom: 2px;
+}
+
+.shop-row {
+  display: grid;
+  grid-template-columns: 20ch 18ch 10ch;
+  gap: 4px;
+  padding: 1px 0;
+  color: #888;
+}
+
+.shop-row.selected {
+  background: #2a2a2a;
+  color: #c0c0c0;
+}
+
+.shop-row.dim {
+  color: #555;
+}
+
+.shop-row.selected.dim {
+  color: #777;
+}
+
+/* ── Equip Screen ──────────────────────────────────────── */
+.equip-header-row {
+  display: grid;
+  grid-template-columns: 10ch 22ch;
+  gap: 4px;
+  color: #555;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 2px;
+  margin-bottom: 2px;
+}
+
+/* Slot list row (EquipSlotsView) and upgrade list row (EquipUpgradeView) */
+.equip-row {
+  display: grid;
+  grid-template-columns: 10ch 22ch auto;
+  gap: 4px;
+  padding: 1px 0;
+  color: #888;
+}
+
+.equip-row.selected {
+  background: #2a2a2a;
+  color: #c0c0c0;
+}
+
+/* Badge shown next to the currently equipped upgrade */
+.equip-active {
+  color: #7ec87e;
+  font-size: 0.8rem;
+}
+
+/* ── Action box pinned to the bottom ──────────────────── */
+/* margin-top: auto pushes this wrapper to the bottom of the flex column */
+.action-box-bottom {
+  margin-top: auto;
+}
+
 /* ── Controls hint ─────────────────────────────────────── */
 .controls-hint {
   text-align: center;

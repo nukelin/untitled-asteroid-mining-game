@@ -61,3 +61,11 @@ To add a new location with custom logic, copy `templateLocation.js`, define its 
 ### Circular Dependency Note
 
 `utils.js` imports from `constants/locations` (for `LOCATIONS_BY_ID`). Location files must **not** import from `utils.js` — use a local `const msg = (state, text) => ({ ...state, ui: { ...state.ui, message: text } })` helper instead.
+
+### Comments
+
+Always add comments to whatever you write. Make it so someone who is very new to programming can read the code and comments and understand whats happening.
+
+### The GitHub Repo
+
+The Github Repo is called untitled-asteroid-mining-game. If I ask you to commit to the GitHub repo, commit to that repo.
