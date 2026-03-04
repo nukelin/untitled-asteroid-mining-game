@@ -1,0 +1,28 @@
+.panel {
+  position: relative;
+  border: 1px solid #004d15;
+  padding: 12px 10px 10px;
+  min-height: 80px;
+  transition: border-color 0.1s, box-shadow 0.1s;
+}
+
+.panel.focused {
+  border-color: #00ff41;
+  box-shadow: 0 0 8px #00ff4144;
+}
+
+.panel-title {
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  background: #0a0f0a;
+  padding: 0 6px;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: #00aa2a;
+  white-space: nowrap;
+}
+
+.panel.focused .panel-title {
+  color: #00ff41;
+}

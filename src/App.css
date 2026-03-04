@@ -1,0 +1,210 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  background: #0a0f0a;
+  color: #00ff41;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+}
+
+body {
+  padding: 16px;
+  overflow: hidden;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Title bar ─────────────────────────────────────────── */
+.game-title {
+  text-align: center;
+  font-size: 1.1rem;
+  letter-spacing: 0.3em;
+  color: #00ff41;
+  text-shadow: 0 0 10px #00ff41;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #004d15;
+}
+
+/* ── Grid layout ───────────────────────────────────────── */
+.game-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  flex: 1;
+}
+
+/* ── Stat rows (ShipStatus) ────────────────────────────── */
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.stat-label {
+  color: #00aa2a;
+  width: 46px;
+  flex-shrink: 0;
+}
+
+.stat-bar {
+  color: #00ff41;
+  letter-spacing: 0;
+}
+
+.stat-value {
+  color: #00aa2a;
+  font-size: 0.8rem;
+  margin-left: 4px;
+}
+
+/* ── Mining ────────────────────────────────────────────── */
+.mining-label {
+  color: #00aa2a;
+  margin-bottom: 4px;
+}
+
+.mining-ore {
+  color: #00ff41;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.mining-bar {
+  display: flex;
+  align-items: center;
+}
+
+.mining-pct {
+  color: #00aa2a;
+  font-size: 0.8rem;
+}
+
+.mining-none {
+  color: #004d15;
+}
+
+/* ── Inventory ─────────────────────────────────────────── */
+.inv-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.inv-ore {
+  color: #00aa2a;
+  width: 60px;
+}
+
+.inv-qty {
+  color: #00ff41;
+}
+
+/* ── Money ─────────────────────────────────────────────── */
+.money-balance {
+  color: #00aa2a;
+  margin-bottom: 6px;
+}
+
+.money-amount {
+  color: #00ff41;
+  font-size: 1.1rem;
+}
+
+.money-message {
+  color: #ffcc00;
+  font-size: 0.85rem;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0.4; }
+}
+
+/* ── List rows (Travel, LocationOptions) ──────────────── */
+.list-row {
+  padding: 2px 0;
+  white-space: pre;
+  cursor: default;
+  color: #00aa2a;
+}
+
+.list-row.selected {
+  background: #003010;
+  color: #00ff41;
+}
+
+.list-row.current-loc {
+  color: #00ff41;
+}
+
+/* ── Market ────────────────────────────────────────────── */
+.market-header {
+  text-align: center;
+  color: #00ff41;
+  margin-bottom: 6px;
+  letter-spacing: 0.15em;
+}
+
+.market-cols {
+  display: grid;
+  grid-template-columns: 7ch 7ch 6ch 7ch;
+  gap: 4px;
+  color: #004d15;
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #003010;
+  padding-bottom: 2px;
+}
+
+.market-col-hdr {
+  text-align: left;
+}
+
+.market-row {
+  display: grid;
+  grid-template-columns: 7ch 7ch 6ch 7ch;
+  gap: 4px;
+  padding: 1px 0;
+  color: #00aa2a;
+  align-items: center;
+}
+
+.market-row.selected {
+  background: #003010;
+  color: #00ff41;
+}
+
+.market-row.dim {
+  color: #004d15;
+}
+
+.market-row.selected.dim {
+  color: #00aa2a;
+}
+
+.market-hint {
+  margin-top: 6px;
+  color: #004d15;
+  font-size: 0.75rem;
+}
+
+/* ── Controls hint ─────────────────────────────────────── */
+.controls-hint {
+  text-align: center;
+  color: #004d15;
+  font-size: 0.75rem;
+  border-top: 1px solid #003010;
+  padding-top: 4px;
+}
