@@ -1,22 +1,9 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react'
-import {
-  TRAVEL_COST,
-  TRAVEL_DURATION_MS,
-  TRAVEL_TICK_MS,
-  REPAIR_COST_PER_HP,
-  REFUEL_COST_PER_UNIT,
-  MINING_TICK_MS,
-  MINING_DURATION_MIN,
-  MINING_DURATION_MAX,
-  MINING_YIELD_MIN,
-  MINING_YIELD_MAX,
-  MINING_FUEL_DRAIN_PER_SECOND,
-  TRAVEL_DESTINATIONS,
-  ORE_TYPES,
-  ORE_MODIFIERS,
-  getActionItems,
-} from '../constants/gameConstants'
-import { MARKET_PRICES } from '../constants/marketPrices'
+import { TRAVEL_COST, TRAVEL_DURATION_MS, TRAVEL_TICK_MS } from '../constants/travel'
+import { MINING_TICK_MS } from '../constants/mining'
+import { TRAVEL_DESTINATIONS, LOCATIONS_BY_ID } from '../constants/locations'
+import { ORE_TYPES } from '../constants/ores'
+import { getActionItems } from '../constants/utils'
 
 const initialState = {
   ship: {
@@ -102,10 +89,9 @@ function reducer(state, action) {
 
       if (actionSubView === 'mineOre') {
         const oreType = ORE_TYPES[state.ui.mineOreIndex]
-        return reducer(
-          { ...state, ui: { ...state.ui, actionSubView: null } },
-          { type: 'START_MINING', payload: { oreType } }
-        )
+        const s = { ...state, ui: { ...state.ui, actionSubView: null } }
+        const handler = LOCATIONS_BY_ID[state.location]?.handlers?.start_mining
+        return handler ? handler(s, { oreType }) : s
       }
 
       const items = getActionItems(state.location, state.mining.active)
@@ -113,12 +99,10 @@ function reducer(state, action) {
       if (!selected) return state
 
       switch (selected.id) {
-        case 'mineToggle':
-          if (state.location !== 'mainBelt') {
-            return reducer(state, { type: 'SET_MESSAGE', payload: 'Travel to the asteroid belt to mine.' })
-          }
-          if (state.mining.active) return reducer(state, { type: 'CANCEL_MINING' })
-          return { ...state, ui: { ...state.ui, actionSubView: 'mineOre', mineOreIndex: 0 } }
+        case 'mineToggle': {
+          const handler = LOCATIONS_BY_ID[state.location]?.handlers?.mineToggle
+          return handler ? handler(state) : state
+        }
         case 'travel':
           return { ...state, ui: { ...state.ui, actionSubView: 'travel', travelIndex: 0 } }
         case 'market':
@@ -180,115 +164,29 @@ function reducer(state, action) {
       }
     }
 
-    case 'START_MINING': {
-      if (state.ship.cargoUsed >= state.ship.cargoMax) {
-        return reducer(state, { type: 'SET_MESSAGE', payload: 'Cargo hold full!' })
-      }
-      if (state.mining.active) return state
-      const oreType = action.payload?.oreType
-      const { durationMult } = ORE_MODIFIERS[oreType] ?? ORE_MODIFIERS.iron
-      const durationMs =
-        (MINING_DURATION_MIN + Math.random() * (MINING_DURATION_MAX - MINING_DURATION_MIN)) * durationMult
-      return {
-        ...state,
-        mining: {
-          active: true,
-          oreType,
-          progress: 0,
-          durationMs,
-          startedAt: Date.now(),
-          fuelAtStart: state.ship.fuel,
-        },
-      }
-    }
-
     case 'TICK_MINING': {
-      if (!state.mining.active) return state
-      const { now } = action.payload
-      const elapsed = now - state.mining.startedAt
-      const progress = Math.min(1, elapsed / state.mining.durationMs)
-      const fuelDrained = (elapsed / 1000) * MINING_FUEL_DRAIN_PER_SECOND
-      const newFuel = Math.max(0, state.mining.fuelAtStart - fuelDrained)
-
-      if (newFuel <= 0) {
-        return reducer({ ...state, ship: { ...state.ship, fuel: 0 } }, { type: 'CANCEL_MINING' })
-      }
-      if (progress >= 1) {
-        return reducer({ ...state, ship: { ...state.ship, fuel: newFuel } }, { type: 'COMPLETE_MINING' })
-      }
-      return {
-        ...state,
-        ship: { ...state.ship, fuel: newFuel },
-        mining: { ...state.mining, progress },
-      }
-    }
-
-    case 'COMPLETE_MINING': {
-      const freeSpace = state.ship.cargoMax - state.ship.cargoUsed
-      if (freeSpace <= 0) return reducer(state, { type: 'CANCEL_MINING' })
-      const oreType = state.mining.oreType
-      const { yieldMult } = ORE_MODIFIERS[oreType] ?? ORE_MODIFIERS.iron
-      const rawYield = (MINING_YIELD_MIN + Math.random() * (MINING_YIELD_MAX - MINING_YIELD_MIN)) * yieldMult
-      const yieldKg = Math.round(Math.min(rawYield, freeSpace))
-      return {
-        ...state,
-        inventory: { ...state.inventory, [oreType]: state.inventory[oreType] + yieldKg },
-        ship: { ...state.ship, cargoUsed: state.ship.cargoUsed + yieldKg },
-        mining: {
-          active: false,
-          oreType: null,
-          progress: 0,
-          durationMs: 0,
-          startedAt: null,
-          fuelAtStart: state.ship.fuel,
-        },
-      }
+      const handler = LOCATIONS_BY_ID[state.location]?.handlers?.tick_mining
+      return handler ? handler(state, action.payload) : state
     }
 
     case 'CANCEL_MINING': {
-      return {
-        ...state,
-        mining: {
-          active: false,
-          oreType: null,
-          progress: 0,
-          durationMs: 0,
-          startedAt: null,
-          fuelAtStart: state.ship.fuel,
-        },
-      }
+      const handler = LOCATIONS_BY_ID[state.location]?.handlers?.cancel_mining
+      return handler ? handler(state) : state
     }
 
     case 'SELL_ORE': {
-      const { oreType } = action.payload
-      const qty = state.inventory[oreType]
-      if (!qty || qty <= 0) {
-        return reducer(state, { type: 'SET_MESSAGE', payload: 'Nothing to sell!' })
-      }
-      const price = MARKET_PRICES[oreType] || 0
-      const earnings = qty * price
-      return {
-        ...state,
-        money: state.money + earnings,
-        inventory: { ...state.inventory, [oreType]: 0 },
-        ship: { ...state.ship, cargoUsed: state.ship.cargoUsed - qty },
-      }
+      const handler = LOCATIONS_BY_ID[state.location]?.handlers?.sell_ore
+      return handler ? handler(state, action.payload) : state
     }
 
     case 'REPAIR_SHIP': {
-      const hpMissing = state.ship.armorMax - state.ship.armor
-      if (hpMissing <= 0) return reducer(state, { type: 'SET_MESSAGE', payload: 'Hull is fully intact.' })
-      const cost = hpMissing * REPAIR_COST_PER_HP
-      if (state.money < cost) return reducer(state, { type: 'SET_MESSAGE', payload: 'Insufficient credits!' })
-      return { ...state, money: state.money - cost, ship: { ...state.ship, armor: state.ship.armorMax } }
+      const handler = LOCATIONS_BY_ID[state.location]?.handlers?.repair
+      return handler ? handler(state) : state
     }
 
     case 'REFUEL_SHIP': {
-      const fuelMissing = state.ship.fuelMax - state.ship.fuel
-      if (fuelMissing <= 0) return reducer(state, { type: 'SET_MESSAGE', payload: 'Tank is full.' })
-      const cost = fuelMissing * REFUEL_COST_PER_UNIT
-      if (state.money < cost) return reducer(state, { type: 'SET_MESSAGE', payload: 'Insufficient credits!' })
-      return { ...state, money: state.money - cost, ship: { ...state.ship, fuel: state.ship.fuelMax } }
+      const handler = LOCATIONS_BY_ID[state.location]?.handlers?.refuel
+      return handler ? handler(state) : state
     }
 
     case 'SET_MESSAGE': {

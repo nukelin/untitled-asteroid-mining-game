@@ -1,5 +1,5 @@
 import Panel from './Panel'
-import { TRAVEL_DESTINATIONS } from '../constants/gameConstants'
+import { TRAVEL_DESTINATIONS } from '../constants/locations'
 
 export default function Travel({ focused, location, travelIndex }) {
   return (

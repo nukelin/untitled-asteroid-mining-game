@@ -1,5 +1,5 @@
 import Panel from './Panel'
-import { formatMoney } from '../constants/gameConstants'
+import { formatMoney } from '../constants/utils'
 
 export default function Money({ money }) {
   return (

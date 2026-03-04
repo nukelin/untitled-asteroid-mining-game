@@ -1,5 +1,5 @@
 import Panel from './Panel'
-import { renderBar } from '../constants/gameConstants'
+import { renderBar } from '../constants/utils'
 
 export default function ShipStatus({ ship }) {
   return (

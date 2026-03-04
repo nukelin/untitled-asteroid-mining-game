@@ -1,6 +1,6 @@
 import Panel from './Panel'
-import { LOCATION_OPTIONS } from '../constants/gameConstants'
-import { MARKET_PRICES } from '../constants/marketPrices'
+import { LOCATION_OPTIONS } from '../constants/locations'
+import { MARKET_PRICES } from '../constants/ores'
 
 function MarketView({ inventory, marketIndex, focused }) {
   const oreTypes = Object.keys(inventory)

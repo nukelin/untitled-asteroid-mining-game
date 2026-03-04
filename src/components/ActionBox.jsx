@@ -1,6 +1,7 @@
 import Panel from './Panel'
-import { TRAVEL_DESTINATIONS, ORE_TYPES, ORE_WEIGHTS, getActionItems } from '../constants/gameConstants'
-import { MARKET_PRICES } from '../constants/marketPrices'
+import { TRAVEL_DESTINATIONS } from '../constants/locations'
+import { ORE_TYPES, ORE_WEIGHTS, MARKET_PRICES } from '../constants/ores'
+import { getActionItems } from '../constants/utils'
 
 function TravelView({ travelIndex, location }) {
   return (
