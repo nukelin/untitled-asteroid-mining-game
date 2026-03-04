@@ -9,8 +9,8 @@ import {
   MINING_YIELD_MIN,
   MINING_YIELD_MAX,
   MINING_FUEL_DRAIN_PER_SECOND,
-  LOCATION_OPTIONS,
   TRAVEL_DESTINATIONS,
+  getActionItems,
   pickWeightedOre,
 } from '../constants/gameConstants'
 import { MARKET_PRICES } from '../constants/marketPrices'
@@ -36,10 +36,9 @@ const initialState = {
     fuelAtStart: 100,
   },
   ui: {
-    focusedPanel: 'travel',
+    actionIndex: 0,
+    actionSubView: null,  // null | 'travel' | 'market'
     travelIndex: 0,
-    locationOptionsIndex: 0,
-    subView: null,
     marketIndex: 0,
     message: null,
   },
@@ -47,75 +46,68 @@ const initialState = {
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'FOCUS_PANEL': {
-      return {
-        ...state,
-        ui: { ...state.ui, focusedPanel: action.payload },
-      }
-    }
-
     case 'MOVE_SELECTION': {
-      const { panel, direction } = action.payload
+      const { direction } = action.payload
       const delta = direction === 'up' ? -1 : 1
 
-      if (panel === 'travel') {
+      if (state.ui.actionSubView === 'travel') {
         const max = TRAVEL_DESTINATIONS.length - 1
         const next = Math.max(0, Math.min(max, state.ui.travelIndex + delta))
         return { ...state, ui: { ...state.ui, travelIndex: next } }
       }
 
-      if (panel === 'locationOptions') {
-        if (state.ui.subView === 'market') {
-          const oreTypes = Object.keys(state.inventory)
-          const max = oreTypes.length - 1
-          const next = Math.max(0, Math.min(max, state.ui.marketIndex + delta))
-          return { ...state, ui: { ...state.ui, marketIndex: next } }
-        }
-        const opts = LOCATION_OPTIONS[state.location] || []
-        const max = opts.length - 1
-        const next = Math.max(0, Math.min(max, state.ui.locationOptionsIndex + delta))
-        return { ...state, ui: { ...state.ui, locationOptionsIndex: next } }
+      if (state.ui.actionSubView === 'market') {
+        const max = Object.keys(state.inventory).length - 1
+        const next = Math.max(0, Math.min(max, state.ui.marketIndex + delta))
+        return { ...state, ui: { ...state.ui, marketIndex: next } }
       }
 
-      return state
+      const items = getActionItems(state.location, state.mining.active)
+      const next = Math.max(0, Math.min(items.length - 1, state.ui.actionIndex + delta))
+      return { ...state, ui: { ...state.ui, actionIndex: next } }
     }
 
     case 'CONFIRM_SELECTION': {
-      const { focusedPanel, travelIndex, locationOptionsIndex, subView, marketIndex } = state.ui
+      const { actionIndex, actionSubView, travelIndex, marketIndex } = state.ui
 
-      if (focusedPanel === 'travel') {
+      if (actionSubView === 'travel') {
         const dest = TRAVEL_DESTINATIONS[travelIndex]
         if (!dest) return state
         return reducer(state, { type: 'TRAVEL', payload: { destination: dest.id } })
       }
 
-      if (focusedPanel === 'locationOptions') {
-        if (subView === 'market') {
-          const oreTypes = Object.keys(state.inventory)
-          const oreType = oreTypes[marketIndex]
-          return reducer(state, { type: 'SELL_ORE', payload: { oreType } })
-        }
-
-        const opts = LOCATION_OPTIONS[state.location] || []
-        const selected = opts[locationOptionsIndex]
-
-        if (state.location === 'earth') {
-          if (selected === 'Market') return reducer(state, { type: 'OPEN_MARKET' })
-          if (selected === 'Repair') return reducer(state, { type: 'REPAIR_SHIP' })
-          if (selected === 'Refuel') return reducer(state, { type: 'REFUEL_SHIP' })
-        }
-
-        if (state.location === 'mainBelt') {
-          if (selected === 'Mine') return reducer(state, { type: 'START_MINING' })
-          if (selected === 'Leave') return reducer(state, { type: 'TRAVEL', payload: { destination: 'earth' } })
-        }
+      if (actionSubView === 'market') {
+        const oreTypes = Object.keys(state.inventory)
+        const oreType = oreTypes[marketIndex]
+        return reducer(state, { type: 'SELL_ORE', payload: { oreType } })
       }
 
-      return state
+      const items = getActionItems(state.location, state.mining.active)
+      const selected = items[actionIndex]
+      if (!selected) return state
+
+      switch (selected.id) {
+        case 'mineToggle':
+          if (state.location !== 'mainBelt') {
+            return reducer(state, { type: 'SET_MESSAGE', payload: 'Travel to the asteroid belt to mine.' })
+          }
+          if (state.mining.active) return reducer(state, { type: 'CANCEL_MINING' })
+          return reducer(state, { type: 'START_MINING' })
+        case 'travel':
+          return { ...state, ui: { ...state.ui, actionSubView: 'travel', travelIndex: 0 } }
+        case 'market':
+          return { ...state, ui: { ...state.ui, actionSubView: 'market', marketIndex: 0 } }
+        case 'repair':
+          return reducer(state, { type: 'REPAIR_SHIP' })
+        case 'refuel':
+          return reducer(state, { type: 'REFUEL_SHIP' })
+        default:
+          return state
+      }
     }
 
     case 'EXIT_SUBVIEW': {
-      return { ...state, ui: { ...state.ui, subView: null, marketIndex: 0 } }
+      return { ...state, ui: { ...state.ui, actionSubView: null } }
     }
 
     case 'TRAVEL': {
@@ -135,7 +127,7 @@ function reducer(state, action) {
         ship: { ...state.ship, fuel: newFuel },
         location: destination,
         mining: cancelMining,
-        ui: { ...state.ui, subView: null, locationOptionsIndex: 0 },
+        ui: { ...state.ui, actionSubView: null, actionIndex: 0 },
       }
     }
 
@@ -146,8 +138,7 @@ function reducer(state, action) {
       if (state.mining.active) return state
       const oreType = pickWeightedOre()
       const durationMs =
-        MINING_DURATION_MIN +
-        Math.random() * (MINING_DURATION_MAX - MINING_DURATION_MIN)
+        MINING_DURATION_MIN + Math.random() * (MINING_DURATION_MAX - MINING_DURATION_MIN)
       return {
         ...state,
         mining: {
@@ -166,24 +157,15 @@ function reducer(state, action) {
       const { now } = action.payload
       const elapsed = now - state.mining.startedAt
       const progress = Math.min(1, elapsed / state.mining.durationMs)
-
       const fuelDrained = (elapsed / 1000) * MINING_FUEL_DRAIN_PER_SECOND
       const newFuel = Math.max(0, state.mining.fuelAtStart - fuelDrained)
 
       if (newFuel <= 0) {
-        return reducer(
-          { ...state, ship: { ...state.ship, fuel: 0 } },
-          { type: 'CANCEL_MINING' }
-        )
+        return reducer({ ...state, ship: { ...state.ship, fuel: 0 } }, { type: 'CANCEL_MINING' })
       }
-
       if (progress >= 1) {
-        return reducer(
-          { ...state, ship: { ...state.ship, fuel: newFuel } },
-          { type: 'COMPLETE_MINING' }
-        )
+        return reducer({ ...state, ship: { ...state.ship, fuel: newFuel } }, { type: 'COMPLETE_MINING' })
       }
-
       return {
         ...state,
         ship: { ...state.ship, fuel: newFuel },
@@ -193,22 +175,14 @@ function reducer(state, action) {
 
     case 'COMPLETE_MINING': {
       const freeSpace = state.ship.cargoMax - state.ship.cargoUsed
-      if (freeSpace <= 0) {
-        return reducer(state, { type: 'CANCEL_MINING' })
-      }
+      if (freeSpace <= 0) return reducer(state, { type: 'CANCEL_MINING' })
       const rawYield = MINING_YIELD_MIN + Math.random() * (MINING_YIELD_MAX - MINING_YIELD_MIN)
       const yieldKg = Math.round(Math.min(rawYield, freeSpace))
       const oreType = state.mining.oreType
       return {
         ...state,
-        inventory: {
-          ...state.inventory,
-          [oreType]: state.inventory[oreType] + yieldKg,
-        },
-        ship: {
-          ...state.ship,
-          cargoUsed: state.ship.cargoUsed + yieldKg,
-        },
+        inventory: { ...state.inventory, [oreType]: state.inventory[oreType] + yieldKg },
+        ship: { ...state.ship, cargoUsed: state.ship.cargoUsed + yieldKg },
         mining: {
           active: false,
           oreType: null,
@@ -234,10 +208,6 @@ function reducer(state, action) {
       }
     }
 
-    case 'OPEN_MARKET': {
-      return { ...state, ui: { ...state.ui, subView: 'market', marketIndex: 0 } }
-    }
-
     case 'SELL_ORE': {
       const { oreType } = action.payload
       const qty = state.inventory[oreType]
@@ -256,34 +226,18 @@ function reducer(state, action) {
 
     case 'REPAIR_SHIP': {
       const hpMissing = state.ship.armorMax - state.ship.armor
-      if (hpMissing <= 0) {
-        return reducer(state, { type: 'SET_MESSAGE', payload: 'Hull is fully intact.' })
-      }
+      if (hpMissing <= 0) return reducer(state, { type: 'SET_MESSAGE', payload: 'Hull is fully intact.' })
       const cost = hpMissing * REPAIR_COST_PER_HP
-      if (state.money < cost) {
-        return reducer(state, { type: 'SET_MESSAGE', payload: 'Insufficient credits!' })
-      }
-      return {
-        ...state,
-        money: state.money - cost,
-        ship: { ...state.ship, armor: state.ship.armorMax },
-      }
+      if (state.money < cost) return reducer(state, { type: 'SET_MESSAGE', payload: 'Insufficient credits!' })
+      return { ...state, money: state.money - cost, ship: { ...state.ship, armor: state.ship.armorMax } }
     }
 
     case 'REFUEL_SHIP': {
       const fuelMissing = state.ship.fuelMax - state.ship.fuel
-      if (fuelMissing <= 0) {
-        return reducer(state, { type: 'SET_MESSAGE', payload: 'Tank is full.' })
-      }
+      if (fuelMissing <= 0) return reducer(state, { type: 'SET_MESSAGE', payload: 'Tank is full.' })
       const cost = fuelMissing * REFUEL_COST_PER_UNIT
-      if (state.money < cost) {
-        return reducer(state, { type: 'SET_MESSAGE', payload: 'Insufficient credits!' })
-      }
-      return {
-        ...state,
-        money: state.money - cost,
-        ship: { ...state.ship, fuel: state.ship.fuelMax },
-      }
+      if (state.money < cost) return reducer(state, { type: 'SET_MESSAGE', payload: 'Insufficient credits!' })
+      return { ...state, money: state.money - cost, ship: { ...state.ship, fuel: state.ship.fuelMax } }
     }
 
     case 'SET_MESSAGE': {
@@ -303,27 +257,16 @@ export function useGameState() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const messageTimerRef = useRef(null)
 
-  const dispatchWithMessage = useCallback(
-    (action) => {
-      dispatch(action)
-    },
-    []
-  )
+  const dispatchWrapped = useCallback((action) => dispatch(action), [])
 
-  // Auto-clear messages after 3s
   useEffect(() => {
     if (state.ui.message) {
       if (messageTimerRef.current) clearTimeout(messageTimerRef.current)
-      messageTimerRef.current = setTimeout(() => {
-        dispatch({ type: 'CLEAR_MESSAGE' })
-      }, 3000)
+      messageTimerRef.current = setTimeout(() => dispatch({ type: 'CLEAR_MESSAGE' }), 3000)
     }
-    return () => {
-      if (messageTimerRef.current) clearTimeout(messageTimerRef.current)
-    }
+    return () => { if (messageTimerRef.current) clearTimeout(messageTimerRef.current) }
   }, [state.ui.message])
 
-  // Mining tick
   useEffect(() => {
     if (!state.mining.active) return
     const interval = setInterval(() => {
@@ -332,5 +275,5 @@ export function useGameState() {
     return () => clearInterval(interval)
   }, [state.mining.active, state.mining.startedAt])
 
-  return { state, dispatch: dispatchWithMessage }
+  return { state, dispatch: dispatchWrapped }
 }

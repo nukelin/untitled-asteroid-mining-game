@@ -33,6 +33,21 @@ export function formatMoney(amount) {
   return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
+export function getActionItems(location, miningActive) {
+  const items = [
+    { id: 'mineToggle', label: miningActive ? 'Stop Mining' : 'Start Mining' },
+    { id: 'travel', label: 'Travel' },
+  ]
+  if (location === 'earth') {
+    items.push(
+      { id: 'market', label: 'Market' },
+      { id: 'repair', label: 'Repair Ship' },
+      { id: 'refuel', label: 'Refuel Ship' },
+    )
+  }
+  return items
+}
+
 export function pickWeightedOre() {
   const total = Object.values(ORE_WEIGHTS).reduce((a, b) => a + b, 0)
   let rand = Math.random() * total

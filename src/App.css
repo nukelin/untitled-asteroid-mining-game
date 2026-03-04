@@ -6,9 +6,9 @@
 
 html, body, #root {
   height: 100%;
-  background: #0a0f0a;
-  color: #00ff41;
-  font-family: 'Courier New', Courier, monospace;
+  background: #1a1a1a;
+  color: #c0c0c0;
+  font-family: monospace;
   font-size: 14px;
 }
 
@@ -20,27 +20,29 @@ body {
 #root {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-/* ── Title bar ─────────────────────────────────────────── */
+/* ── Title ─────────────────────────────────────────────── */
 .game-title {
   text-align: center;
   font-size: 1.1rem;
   letter-spacing: 0.3em;
-  color: #00ff41;
-  text-shadow: 0 0 10px #00ff41;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #004d15;
+  color: #c0c0c0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #444;
 }
 
-/* ── Grid layout ───────────────────────────────────────── */
-.game-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: auto auto;
+/* ── Top row: auto-sized boxes ─────────────────────────── */
+.top-row {
+  display: flex;
   gap: 10px;
-  flex: 1;
+  align-items: flex-start;
+}
+
+.top-row .panel {
+  width: fit-content;
+  white-space: nowrap;
 }
 
 /* ── Stat rows (ShipStatus) ────────────────────────────── */
@@ -49,50 +51,22 @@ body {
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
-  white-space: nowrap;
 }
 
 .stat-label {
-  color: #00aa2a;
+  color: #888;
   width: 46px;
   flex-shrink: 0;
 }
 
 .stat-bar {
-  color: #00ff41;
+  color: #c0c0c0;
   letter-spacing: 0;
 }
 
 .stat-value {
-  color: #00aa2a;
-  font-size: 0.8rem;
-  margin-left: 4px;
-}
-
-/* ── Mining ────────────────────────────────────────────── */
-.mining-label {
-  color: #00aa2a;
-  margin-bottom: 4px;
-}
-
-.mining-ore {
-  color: #00ff41;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.mining-bar {
-  display: flex;
-  align-items: center;
-}
-
-.mining-pct {
-  color: #00aa2a;
-  font-size: 0.8rem;
-}
-
-.mining-none {
-  color: #004d15;
+  color: #888;
+  font-size: 0.85rem;
 }
 
 /* ── Inventory ─────────────────────────────────────────── */
@@ -103,28 +77,50 @@ body {
 }
 
 .inv-ore {
-  color: #00aa2a;
+  color: #888;
   width: 60px;
 }
 
 .inv-qty {
-  color: #00ff41;
+  color: #c0c0c0;
 }
 
 /* ── Money ─────────────────────────────────────────────── */
 .money-balance {
-  color: #00aa2a;
-  margin-bottom: 6px;
+  color: #888;
 }
 
 .money-amount {
-  color: #00ff41;
-  font-size: 1.1rem;
+  color: #c0c0c0;
+  font-size: 1.05rem;
 }
 
-.money-message {
+/* ── Status bar ────────────────────────────────────────── */
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.status-label {
+  color: #888;
+}
+
+.status-value {
+  color: #c0c0c0;
+}
+
+.status-dim {
+  color: #555;
+}
+
+.status-sep {
+  color: #444;
+}
+
+.status-message {
   color: #ffcc00;
-  font-size: 0.85rem;
   animation: blink 0.8s step-end infinite;
 }
 
@@ -132,79 +128,73 @@ body {
   50% { opacity: 0.4; }
 }
 
-/* ── List rows (Travel, LocationOptions) ──────────────── */
+/* ── List rows (ActionBox menus) ───────────────────────── */
 .list-row {
   padding: 2px 0;
   white-space: pre;
   cursor: default;
-  color: #00aa2a;
+  color: #888;
 }
 
 .list-row.selected {
-  background: #003010;
-  color: #00ff41;
+  background: #2a2a2a;
+  color: #c0c0c0;
 }
 
 .list-row.current-loc {
-  color: #00ff41;
+  color: #c0c0c0;
+}
+
+/* ── Action sub-views ──────────────────────────────────── */
+.action-subheader {
+  color: #c0c0c0;
+  margin-bottom: 4px;
+}
+
+.action-hint {
+  margin-top: 6px;
+  color: #555;
+  font-size: 0.8rem;
 }
 
 /* ── Market ────────────────────────────────────────────── */
-.market-header {
-  text-align: center;
-  color: #00ff41;
-  margin-bottom: 6px;
-  letter-spacing: 0.15em;
-}
-
 .market-cols {
   display: grid;
-  grid-template-columns: 7ch 7ch 6ch 7ch;
+  grid-template-columns: 8ch 7ch 6ch 8ch;
   gap: 4px;
-  color: #004d15;
-  font-size: 0.75rem;
+  color: #555;
+  font-size: 0.8rem;
   margin-bottom: 2px;
-  border-bottom: 1px solid #003010;
+  border-bottom: 1px solid #333;
   padding-bottom: 2px;
-}
-
-.market-col-hdr {
-  text-align: left;
 }
 
 .market-row {
   display: grid;
-  grid-template-columns: 7ch 7ch 6ch 7ch;
+  grid-template-columns: 8ch 7ch 6ch 8ch;
   gap: 4px;
   padding: 1px 0;
-  color: #00aa2a;
-  align-items: center;
+  color: #888;
 }
 
 .market-row.selected {
-  background: #003010;
-  color: #00ff41;
+  background: #2a2a2a;
+  color: #c0c0c0;
 }
 
 .market-row.dim {
-  color: #004d15;
+  color: #555;
 }
 
 .market-row.selected.dim {
-  color: #00aa2a;
-}
-
-.market-hint {
-  margin-top: 6px;
-  color: #004d15;
-  font-size: 0.75rem;
+  color: #888;
 }
 
 /* ── Controls hint ─────────────────────────────────────── */
 .controls-hint {
   text-align: center;
-  color: #004d15;
+  color: #555;
   font-size: 0.75rem;
-  border-top: 1px solid #003010;
+  border-top: 1px solid #333;
   padding-top: 4px;
 }
