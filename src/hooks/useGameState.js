@@ -57,6 +57,7 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
     case 'MOVE_SELECTION': {
+      if (state.travel.active) return state
       const { direction } = action.payload
       const delta = direction === 'up' ? -1 : 1
 
@@ -84,6 +85,7 @@ function reducer(state, action) {
     }
 
     case 'CONFIRM_SELECTION': {
+      if (state.travel.active) return state
       const { actionIndex, actionSubView, travelIndex, marketIndex } = state.ui
 
       if (actionSubView === 'travel') {

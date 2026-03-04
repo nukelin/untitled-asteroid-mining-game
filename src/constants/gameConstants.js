@@ -86,25 +86,26 @@ export function formatMoney(amount) {
 }
 
 // ─── Utility: Build Action Item List ─────────────────────────────────────────
-// Returns the array of selectable action items for the current game context.
-// The list always includes "Start/Stop Mining" and "Travel".
-// Earth-only actions (Market, Repair Ship, Refuel Ship) are appended when at Earth.
+// Returns the array of selectable action items for the current location.
+// Each location only shows its own actions — no cross-location bleed.
 //   location    – current location ID (e.g. 'earth' | 'mainBelt')
 //   miningActive – whether a mining operation is currently in progress
 export function getActionItems(location, miningActive) {
-  const items = [
-    // Label toggles between "Stop Mining" and "Start Mining" depending on state.
-    { id: 'mineToggle', label: miningActive ? 'Stop Mining' : 'Start Mining' },
-    { id: 'travel', label: 'Travel' },
-  ]
+  if (location === 'mainBelt') {
+    return [
+      { id: 'mineToggle', label: miningActive ? 'Stop Mining' : 'Start Mining' },
+      { id: 'travel', label: 'Travel' },
+    ]
+  }
   if (location === 'earth') {
-    items.push(
+    return [
       { id: 'market', label: 'Market' },
       { id: 'repair', label: 'Repair Ship' },
       { id: 'refuel', label: 'Refuel Ship' },
-    )
+      { id: 'travel', label: 'Travel' },
+    ]
   }
-  return items
+  return [{ id: 'travel', label: 'Travel' }]
 }
 
 // ─── Utility: Pick Weighted Random Ore ───────────────────────────────────────

@@ -91,6 +91,7 @@ export default function App() {
       <ActionBox
         location={location}
         mining={mining}
+        travel={travel}
         actionIndex={ui.actionIndex}       // which main-menu item is highlighted
         actionSubView={actionSubView}       // which sub-menu is open (null | 'travel' | 'market' | 'mineOre')
         travelIndex={ui.travelIndex}        // highlighted row in the travel list

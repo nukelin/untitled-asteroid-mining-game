@@ -65,7 +65,15 @@ function OreSelectView({ mineOreIndex }) {
   )
 }
 
-export default function ActionBox({ location, mining, actionIndex, actionSubView, travelIndex, marketIndex, mineOreIndex, inventory }) {
+export default function ActionBox({ location, mining, travel, actionIndex, actionSubView, travelIndex, marketIndex, mineOreIndex, inventory }) {
+  if (travel.active) {
+    return (
+      <Panel title="ACTIONS">
+        <div className="action-hint">Traveling...</div>
+      </Panel>
+    )
+  }
+
   if (actionSubView === 'travel') {
     return (
       <Panel title="ACTIONS">
