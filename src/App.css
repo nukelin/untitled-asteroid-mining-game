@@ -288,6 +288,23 @@ body {
   font-size: 0.8rem;
 }
 
+/* ── Activity Log ──────────────────────────────────────── */
+/* Older log entries are dimmed; the newest entry stays bright */
+.log-entry {
+  color: #555;
+  font-size: 0.85rem;
+  padding: 1px 0;
+}
+
+.log-latest {
+  color: #c0c0c0;
+}
+
+.log-empty {
+  color: #555;
+  font-size: 0.85rem;
+}
+
 /* ── Action box pinned to the bottom ──────────────────── */
 /* margin-top: auto pushes this wrapper to the bottom of the flex column */
 .action-box-bottom {

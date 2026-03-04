@@ -5,7 +5,7 @@ import { TRAVEL_DESTINATIONS, LOCATIONS_BY_ID } from '../constants/locations'
 import { ORE_TYPES } from '../constants/ores'
 import { BUYER_COUNTRIES, generateBuyerPrices } from '../constants/buyers'
 import ALL_UPGRADES, { UPGRADES_BY_ID, UPGRADE_SLOTS } from '../constants/shipUpgrades'
-import { getActionItems } from '../constants/utils'
+import { getActionItems, formatMoney } from '../constants/utils'
 
 const initialState = {
   ship: {
@@ -50,7 +50,14 @@ const initialState = {
     equipUpgradeIndex: 0,  // cursor position in the upgrade list (equipSlot view)
     selectedEquipSlot: null, // slot id the player chose to modify
     message: null,
+    log: [],  // array of strings — newest first, capped at 10 entries
   },
+}
+
+// Prepends a new message to the activity log and trims it to the 10 most recent entries.
+// Used throughout the reducer to record successful player actions.
+function addLog(state, text) {
+  return { ...state, ui: { ...state.ui, log: [text, ...state.ui.log].slice(0, 10) } }
 }
 
 function reducer(state, action) {
@@ -250,13 +257,16 @@ function reducer(state, action) {
       const cancelMining = state.mining.active
         ? { active: false, oreType: null, progress: 0, durationMs: 0, startedAt: null, fuelAtStart: newFuel }
         : state.mining
-      return {
+      // Look up the human-readable label for the destination (e.g. "Main Belt")
+      const destLabel = LOCATIONS_BY_ID[destination]?.label ?? destination
+      const travelingState = {
         ...state,
         ship: { ...state.ship, fuel: newFuel },
         mining: cancelMining,
         travel: { active: true, destination, progress: 0, startedAt: Date.now() },
         ui: { ...state.ui, actionSubView: null, actionIndex: 0 },
       }
+      return addLog(travelingState, `Departing for ${destLabel}.`)
     }
 
     case 'TICK_TRAVEL': {
@@ -272,11 +282,13 @@ function reducer(state, action) {
 
     case 'COMPLETE_TRAVEL': {
       const { destination } = state.travel
-      return {
+      const arrivedLabel = LOCATIONS_BY_ID[destination]?.label ?? destination
+      const arrivedState = {
         ...state,
         location: destination,
         travel: { active: false, destination: null, progress: 0, startedAt: null },
       }
+      return addLog(arrivedState, `Arrived at ${arrivedLabel}.`)
     }
 
     case 'TICK_MINING': {
@@ -320,12 +332,13 @@ function reducer(state, action) {
       }
 
       // Just add to owned inventory — the player equips it manually via the Equip menu
-      return {
+      const purchasedState = {
         ...state,
         money:    state.money - upgrade.price,
         upgrades: [...state.upgrades, upgradeId],
         ui:       { ...state.ui, message: `${upgrade.name} purchased! Equip it from the Equip menu.` },
       }
+      return addLog(purchasedState, `${upgrade.name} purchased for ${formatMoney(upgrade.price)}.`)
     }
 
     case 'EQUIP_UPGRADE': {
@@ -356,13 +369,18 @@ function reducer(state, action) {
         cargoMax: state.ship.cargoMax - (s.cargoBonus ?? 0) + (n.cargoBonus ?? 0),
       }
 
-      const msg = newUpgrade ? `${newUpgrade.name} equipped!` : `${slot} slot cleared.`
-      return {
+      const flashMsg = newUpgrade ? `${newUpgrade.name} equipped!` : `${slot} slot cleared.`
+      // Slightly more descriptive version for the persistent log
+      const logMsg = newUpgrade
+        ? `${newUpgrade.name} equipped in ${slot} slot.`
+        : `${slot} slot cleared.`
+      const equippedState = {
         ...state,
         ship:     newShip,
         equipped: { ...state.equipped, [slot]: upgradeId ?? null },
-        ui:       { ...state.ui, message: msg },
+        ui:       { ...state.ui, message: flashMsg },
       }
+      return addLog(equippedState, logMsg)
     }
 
     case 'SET_MESSAGE': {

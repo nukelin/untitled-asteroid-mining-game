@@ -10,6 +10,7 @@ import { useEffect } from 'react'
 import { useGameState } from './hooks/useGameState'
 import StatusBar from './components/StatusBar'
 import ActionBox from './components/ActionBox'
+import LogBox from './components/LogBox'
 
 export default function App() {
   // Grab the entire game state tree plus the dispatch function that drives all state changes.
@@ -21,7 +22,7 @@ export default function App() {
   // actionSubView tracks which sub-menu is open:
   //   null | 'travel' | 'sell' | 'sellOre' | 'mineOre'
   // message is an optional transient status string shown in the status bar.
-  const { actionSubView, message } = ui
+  const { actionSubView, message, log } = ui
 
   // ── Keyboard Handler ────────────────────────────────────────────────────────
   // Attach a keydown listener to the window so the whole game is keyboard-driven.
@@ -77,6 +78,8 @@ export default function App() {
 
       {/* Action panel: pinned to the bottom of the screen */}
       <div className="action-box-bottom">
+      {/* Activity log: shows the last 5 player actions above the action box */}
+      <LogBox log={log} />
       <ActionBox
         location={location}
         mining={mining}
