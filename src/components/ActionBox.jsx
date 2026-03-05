@@ -7,7 +7,10 @@ import { getActionItems, formatMoney } from '../constants/utils'
 
 // ─── TravelView ───────────────────────────────────────────────────────────────
 // Shows a list of destinations the player can travel to.
+// The last item in the list is always "Back", which returns to the main menu.
 function TravelView({ travelIndex, location }) {
+  // "Back" lives one index past the last destination
+  const backIndex = TRAVEL_DESTINATIONS.length
   return (
     <div>
       <div className="action-subheader">-- Travel --</div>
@@ -20,14 +23,20 @@ function TravelView({ travelIndex, location }) {
           </div>
         )
       })}
-      <div className="action-hint">[ESC] Back</div>
+      {/* Selectable Back option — highlighted when the cursor reaches this index */}
+      <div className={`list-row${travelIndex === backIndex ? ' selected' : ''}`}>
+        {travelIndex === backIndex ? '> ' : '  '}Back
+      </div>
     </div>
   )
 }
 
 // ─── BuyerSelectView ──────────────────────────────────────────────────────────
 // First screen of the Sell flow: shows a simple list of buyer countries.
+// The last item is always "Back", which returns to the main menu.
 function BuyerSelectView({ buyerIndex }) {
+  // "Back" lives one index past the last buyer
+  const backIndex = BUYER_COUNTRIES.length
   return (
     <div>
       <div className="action-subheader">-- Sell --</div>
@@ -42,7 +51,10 @@ function BuyerSelectView({ buyerIndex }) {
         )
       })}
 
-      <div className="action-hint">[ESC] Back</div>
+      {/* Selectable Back option */}
+      <div className={`list-row${buyerIndex === backIndex ? ' selected' : ''}`}>
+        {buyerIndex === backIndex ? '> ' : '  '}Back
+      </div>
     </div>
   )
 }
@@ -75,7 +87,10 @@ function SellOreView({ inventory, marketIndex, buyerPrices, selectedBuyer, buyer
           </div>
         )
       })}
-      <div className="action-hint">[ESC] Back</div>
+      {/* Selectable Back option — one index past the last ore */}
+      <div className={`list-row${marketIndex === oreTypes.length ? ' selected' : ''}`}>
+        {marketIndex === oreTypes.length ? '> ' : '  '}Back
+      </div>
     </div>
   )
 }
@@ -108,7 +123,10 @@ function EquipSlotsView({ equipSlotIndex, equipped, upgrades }) {
           </div>
         )
       })}
-      <div className="action-hint">[ESC] Back</div>
+      {/* Selectable Back option — one index past the last slot */}
+      <div className={`equip-row${equipSlotIndex === UPGRADE_SLOTS.length ? ' selected' : ''}`}>
+        <span>{equipSlotIndex === UPGRADE_SLOTS.length ? '>' : ' '} Back</span>
+      </div>
     </div>
   )
 }
@@ -150,7 +168,10 @@ function EquipUpgradeView({ equipUpgradeIndex, equipped, upgrades, selectedSlot 
           No upgrades owned for this slot.
         </div>
       )}
-      <div className="action-hint">[ESC] Back</div>
+      {/* Selectable Back option — one index past the last option (None + upgrades) */}
+      <div className={`equip-row${equipUpgradeIndex === options.length ? ' selected' : ''}`}>
+        <span>{equipUpgradeIndex === options.length ? '>' : ' '} Back</span>
+      </div>
     </div>
   )
 }
@@ -181,7 +202,10 @@ function ShopView({ shopIndex, upgrades, money }) {
           </div>
         )
       })}
-      <div className="action-hint">[ESC] Back</div>
+      {/* Selectable Back option — one index past the last upgrade */}
+      <div className={`list-row${shopIndex === ALL_UPGRADES.length ? ' selected' : ''}`}>
+        {shopIndex === ALL_UPGRADES.length ? '> ' : '  '}Back
+      </div>
     </div>
   )
 }
@@ -202,7 +226,10 @@ function OreSelectView({ mineOreIndex }) {
           </div>
         )
       })}
-      <div className="action-hint">[ESC] Back</div>
+      {/* Selectable Back option — one index past the last ore type */}
+      <div className={`list-row${mineOreIndex === ORE_TYPES.length ? ' selected' : ''}`}>
+        {mineOreIndex === ORE_TYPES.length ? '> ' : '  '}Back
+      </div>
     </div>
   )
 }

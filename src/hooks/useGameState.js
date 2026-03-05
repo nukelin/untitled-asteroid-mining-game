@@ -68,52 +68,60 @@ function reducer(state, action) {
       const delta = direction === 'up' ? -1 : 1
 
       if (state.ui.actionSubView === 'travel') {
-        const max = TRAVEL_DESTINATIONS.length - 1
+        // Max is TRAVEL_DESTINATIONS.length (not length-1) to include the "Back" item at the end
+        const max = TRAVEL_DESTINATIONS.length
         const next = Math.max(0, Math.min(max, state.ui.travelIndex + delta))
         return { ...state, ui: { ...state.ui, travelIndex: next } }
       }
 
       // 'equip' view: player picks a slot to modify
       if (state.ui.actionSubView === 'equip') {
-        const max = UPGRADE_SLOTS.length - 1
+        // Max includes the "Back" item at the end
+        const max = UPGRADE_SLOTS.length
         const next = Math.max(0, Math.min(max, state.ui.equipSlotIndex + delta))
         return { ...state, ui: { ...state.ui, equipSlotIndex: next } }
       }
 
       // 'equipSlot' view: player picks which upgrade to put in the chosen slot
-      // Options are: [None, ...owned upgrades for that slot]
+      // Options are: [None, ...owned upgrades for that slot, Back]
       if (state.ui.actionSubView === 'equipSlot') {
         const slotUpgrades = ALL_UPGRADES.filter(
           u => u.slot === state.ui.selectedEquipSlot && state.upgrades.includes(u.id)
         )
-        const max = slotUpgrades.length  // +1 for "None" option, then -1 = length
+        // slotUpgrades.length + 1 = last real option ("None" at 0, upgrades after).
+        // Add 1 more for the "Back" item.
+        const max = slotUpgrades.length + 1
         const next = Math.max(0, Math.min(max, state.ui.equipUpgradeIndex + delta))
         return { ...state, ui: { ...state.ui, equipUpgradeIndex: next } }
       }
 
       // 'shop' view: player picks an upgrade to buy
       if (state.ui.actionSubView === 'shop') {
-        const max = ALL_UPGRADES.length - 1
+        // Max includes the "Back" item at the end
+        const max = ALL_UPGRADES.length
         const next = Math.max(0, Math.min(max, state.ui.shopIndex + delta))
         return { ...state, ui: { ...state.ui, shopIndex: next } }
       }
 
       // 'sell' view: player picks a buyer country
       if (state.ui.actionSubView === 'sell') {
-        const max = BUYER_COUNTRIES.length - 1
+        // Max includes the "Back" item at the end
+        const max = BUYER_COUNTRIES.length
         const next = Math.max(0, Math.min(max, state.ui.buyerIndex + delta))
         return { ...state, ui: { ...state.ui, buyerIndex: next } }
       }
 
       // 'sellOre' view: player picks which ore to sell to the chosen buyer
       if (state.ui.actionSubView === 'sellOre') {
-        const max = Object.keys(state.inventory).length - 1
+        // Max includes the "Back" item at the end
+        const max = Object.keys(state.inventory).length
         const next = Math.max(0, Math.min(max, state.ui.marketIndex + delta))
         return { ...state, ui: { ...state.ui, marketIndex: next } }
       }
 
       if (state.ui.actionSubView === 'mineOre') {
-        const max = ORE_TYPES.length - 1
+        // Max includes the "Back" item at the end
+        const max = ORE_TYPES.length
         const next = Math.max(0, Math.min(max, state.ui.mineOreIndex + delta))
         return { ...state, ui: { ...state.ui, mineOreIndex: next } }
       }
@@ -128,6 +136,8 @@ function reducer(state, action) {
       const { actionIndex, actionSubView, travelIndex, marketIndex } = state.ui
 
       if (actionSubView === 'travel') {
+        // If the cursor is on the "Back" item (one past the last destination), go back
+        if (travelIndex === TRAVEL_DESTINATIONS.length) return reducer(state, { type: 'EXIT_SUBVIEW' })
         const dest = TRAVEL_DESTINATIONS[travelIndex]
         if (!dest) return state
         return reducer(state, { type: 'TRAVEL', payload: { destination: dest.id } })
@@ -135,6 +145,8 @@ function reducer(state, action) {
 
       // Player confirmed a slot — step into the upgrade picker for that slot
       if (actionSubView === 'equip') {
+        // If the cursor is on the "Back" item (one past the last slot), go back
+        if (state.ui.equipSlotIndex === UPGRADE_SLOTS.length) return reducer(state, { type: 'EXIT_SUBVIEW' })
         const slot = UPGRADE_SLOTS[state.ui.equipSlotIndex]
         if (!slot) return state
         return {
@@ -154,7 +166,8 @@ function reducer(state, action) {
         const slotUpgrades = ALL_UPGRADES.filter(
           u => u.slot === slot && state.upgrades.includes(u.id)
         )
-        // Index 0 = "None", indices 1+ = upgrades
+        // Index 0 = "None", indices 1..N = upgrades, index N+1 = "Back"
+        if (state.ui.equipUpgradeIndex === slotUpgrades.length + 1) return reducer(state, { type: 'EXIT_SUBVIEW' })
         const upgradeId = state.ui.equipUpgradeIndex === 0
           ? null
           : slotUpgrades[state.ui.equipUpgradeIndex - 1]?.id ?? null
@@ -163,6 +176,8 @@ function reducer(state, action) {
 
       // Player confirmed an upgrade in the shop — attempt to buy it
       if (actionSubView === 'shop') {
+        // If the cursor is on the "Back" item (one past the last upgrade), go back
+        if (state.ui.shopIndex === ALL_UPGRADES.length) return reducer(state, { type: 'EXIT_SUBVIEW' })
         const upgrade = ALL_UPGRADES[state.ui.shopIndex]
         if (!upgrade) return state
         return reducer(state, { type: 'BUY_UPGRADE', payload: { upgradeId: upgrade.id } })
@@ -170,6 +185,8 @@ function reducer(state, action) {
 
       // Player confirmed a buyer country — step into the ore-picker for that buyer
       if (actionSubView === 'sell') {
+        // If the cursor is on the "Back" item (one past the last buyer), go back
+        if (state.ui.buyerIndex === BUYER_COUNTRIES.length) return reducer(state, { type: 'EXIT_SUBVIEW' })
         const buyer = BUYER_COUNTRIES[state.ui.buyerIndex]
         if (!buyer) return state
         return {
@@ -186,12 +203,16 @@ function reducer(state, action) {
       // Player confirmed an ore — sell it at the chosen buyer's price
       if (actionSubView === 'sellOre') {
         const oreTypes = Object.keys(state.inventory)
+        // If the cursor is on the "Back" item (one past the last ore), go back
+        if (marketIndex === oreTypes.length) return reducer(state, { type: 'EXIT_SUBVIEW' })
         const oreType = oreTypes[marketIndex]
         const price = state.ui.buyerPrices?.[state.ui.selectedBuyer]?.[oreType]
         return reducer(state, { type: 'SELL_ORE', payload: { oreType, price } })
       }
 
       if (actionSubView === 'mineOre') {
+        // If the cursor is on the "Back" item (one past the last ore type), go back
+        if (state.ui.mineOreIndex === ORE_TYPES.length) return reducer(state, { type: 'EXIT_SUBVIEW' })
         const oreType = ORE_TYPES[state.ui.mineOreIndex]
         const s = { ...state, ui: { ...state.ui, actionSubView: null } }
         const handler = LOCATIONS_BY_ID[state.location]?.handlers?.start_mining

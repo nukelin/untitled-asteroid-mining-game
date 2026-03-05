@@ -103,7 +103,7 @@ export default function App() {
       />
       {/* Persistent hint reminding the player of the keyboard controls */}
       <div className="controls-hint">
-        ↑↓ navigate &nbsp;|&nbsp; ENTER confirm &nbsp;|&nbsp; ESC back
+        ↑↓ navigate &nbsp;|&nbsp; ENTER confirm
       </div>
       </div>
     </>
